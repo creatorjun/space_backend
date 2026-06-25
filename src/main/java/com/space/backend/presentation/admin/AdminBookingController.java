@@ -1,3 +1,4 @@
+// src/main/java/com/space/backend/presentation/admin/AdminBookingController.java
 package com.space.backend.presentation.admin;
 
 import com.space.backend.application.admin.*;
@@ -25,12 +26,12 @@ public class AdminBookingController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         BookingSearchCondition cond = new BookingSearchCondition(status, date, page, size);
-        return ResponseEntity.ok(adminBookingService.getBookings(cond));
+        return ResponseEntity.ok(AdminBookingListResponse.from(adminBookingService.getBookings(cond)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AdminBookingDetailResponse> detail(@PathVariable UUID id) {
-        return ResponseEntity.ok(adminBookingService.getBookingById(id));
+    public ResponseEntity<AdminBookingResponse> detail(@PathVariable UUID id) {
+        return ResponseEntity.ok(AdminBookingResponse.from(adminBookingService.getBookingById(id)));
     }
 
     @PatchMapping("/{id}/status")

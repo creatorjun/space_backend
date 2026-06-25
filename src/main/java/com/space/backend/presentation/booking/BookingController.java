@@ -1,6 +1,8 @@
+// src/main/java/com/space/backend/presentation/booking/BookingController.java
 package com.space.backend.presentation.booking;
 
-import com.space.backend.application.booking.*;
+import com.space.backend.application.booking.BookingService;
+import com.space.backend.application.booking.CreateBookingCommand;
 import com.space.backend.domain.booking.CancelPreview;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,16 +24,16 @@ public class BookingController {
     public ResponseEntity<BookingResponse> create(
             @AuthenticationPrincipal String userIdStr,
             @Valid @RequestBody CreateBookingRequest request) {
-        BookingResponse resp = bookingService.createBooking(
-                UUID.fromString(userIdStr), request.toCommand());
-        return ResponseEntity.status(HttpStatus.CREATED).body(resp);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                BookingResponse.from(bookingService.createBooking(
+                        UUID.fromString(userIdStr), request.toCommand())));
     }
 
     @GetMapping("/my")
     public ResponseEntity<BookingListResponse> myBookings(
             @AuthenticationPrincipal String userIdStr) {
         return ResponseEntity.ok(
-                bookingService.getMyBookings(UUID.fromString(userIdStr)));
+                BookingListResponse.from(bookingService.getMyBookings(UUID.fromString(userIdStr))));
     }
 
     @GetMapping("/{id}")
@@ -39,7 +41,7 @@ public class BookingController {
             @AuthenticationPrincipal String userIdStr,
             @PathVariable UUID id) {
         return ResponseEntity.ok(
-                bookingService.getBookingById(UUID.fromString(userIdStr), id));
+                BookingResponse.from(bookingService.getBookingById(UUID.fromString(userIdStr), id)));
     }
 
     @GetMapping("/{id}/cancel-preview")

@@ -30,19 +30,19 @@ public class AdminBookingServiceImpl implements AdminBookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public AdminBookingListResponse getBookings(BookingSearchCondition condition) {
+    public AdminBookingListResult getBookings(BookingSearchCondition condition) {
         List<Booking> bookings = adminBookingQueryPort.findByCondition(condition);
         long total = adminBookingQueryPort.countByCondition(condition);
-        List<AdminBookingDto> dtos = bookings.stream().map(AdminBookingDto::from).toList();
-        return new AdminBookingListResponse(dtos, (int) total, condition.page(), condition.size());
+        List<AdminBookingResult> results = bookings.stream().map(AdminBookingResult::from).toList();
+        return new AdminBookingListResult(results, (int) total, condition.page(), condition.size());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public AdminBookingDetailResponse getBookingById(UUID bookingId) {
+    public AdminBookingResult getBookingById(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-        return new AdminBookingDetailResponse(AdminBookingDto.from(booking));
+        return AdminBookingResult.from(booking);
     }
 
     @Override

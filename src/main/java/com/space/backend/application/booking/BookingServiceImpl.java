@@ -1,3 +1,4 @@
+// src/main/java/com/space/backend/application/booking/BookingServiceImpl.java
 package com.space.backend.application.booking;
 
 import com.space.backend.domain.booking.*;
@@ -29,7 +30,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse createBooking(UUID userId, CreateBookingCommand cmd) {
+    public BookingResult createBooking(UUID userId, CreateBookingCommand cmd) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Space space = spaceRepository.findById(cmd.spaceId())
@@ -59,26 +60,26 @@ public class BookingServiceImpl implements BookingService {
                 .memo(cmd.memo())
                 .build();
 
-        return new BookingResponse(BookingDto.from(bookingRepository.save(booking)));
+        return BookingResult.from(bookingRepository.save(booking));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BookingListResponse getMyBookings(UUID userId) {
-        List<BookingDto> dtos = bookingRepository.findByUserId(userId)
-                .stream().map(BookingDto::from).toList();
-        return new BookingListResponse(dtos);
+    public BookingListResult getMyBookings(UUID userId) {
+        List<BookingResult> results = bookingRepository.findByUserId(userId)
+                .stream().map(BookingResult::from).toList();
+        return new BookingListResult(results);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponse getBookingById(UUID userId, UUID bookingId) {
+    public BookingResult getBookingById(UUID userId, UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
         if (!booking.getUser().getId().equals(userId)) {
             throw new SecurityException("접근 권한이 없습니다");
         }
-        return new BookingResponse(BookingDto.from(booking));
+        return BookingResult.from(booking);
     }
 
     @Override
