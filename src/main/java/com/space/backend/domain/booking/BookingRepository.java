@@ -12,4 +12,5 @@ public interface BookingRepository {
     List<Booking> findBySpaceAndDateRange(UUID spaceId, Instant from, Instant to);
     List<Booking> findBySpaceAndMonth(UUID spaceId, Instant monthStart, Instant monthEnd);
     List<Booking> findExpiredPending(Instant now);
+    int bulkExpire(Instant now);
 }

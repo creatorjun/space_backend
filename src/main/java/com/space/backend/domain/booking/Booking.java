@@ -9,7 +9,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "bookings")
+@Table(name = "bookings",
+        indexes = {
+                @Index(name = "idx_booking_user_created",  columnList = "user_id, created_at DESC"),
+                @Index(name = "idx_booking_space_status",  columnList = "space_id, status"),
+                @Index(name = "idx_booking_pending_expires", columnList = "status, pending_expires_at")
+        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -95,7 +100,7 @@ public class Booking {
     }
 
     public void expire() {
-        this.status = BookingStatus.CANCELLED_BY_ADMIN;
+        this.status = BookingStatus.EXPIRED;
     }
 
     public void updateAdminMemo(String adminMemo) {

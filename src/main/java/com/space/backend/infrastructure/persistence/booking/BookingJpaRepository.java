@@ -3,6 +3,7 @@ package com.space.backend.infrastructure.persistence.booking;
 import com.space.backend.domain.booking.Booking;
 import com.space.backend.domain.booking.BookingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -49,4 +50,14 @@ public interface BookingJpaRepository extends JpaRepository<Booking, UUID> {
               AND b.pendingExpiresAt < :now
             """)
     List<Booking> findExpiredPending(@Param("now") Instant now);
+
+    @Modifying
+    @Query("""
+            UPDATE Booking b
+            SET b.status = 'EXPIRED', b.updatedAt = :now
+            WHERE b.status = 'PENDING'
+              AND b.pendingExpiresAt IS NOT NULL
+              AND b.pendingExpiresAt < :now
+            """)
+    int bulkExpire(@Param("now") Instant now);
 }

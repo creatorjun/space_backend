@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -52,5 +51,10 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public List<Booking> findExpiredPending(Instant now) {
         return jpa.findExpiredPending(now);
+    }
+
+    @Override
+    public int bulkExpire(Instant now) {
+        return jpa.bulkExpire(now);
     }
 }
