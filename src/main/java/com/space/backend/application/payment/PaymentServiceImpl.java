@@ -1,19 +1,17 @@
+// src/main/java/com/space/backend/application/payment/PaymentServiceImpl.java
 package com.space.backend.application.payment;
 
 import com.space.backend.domain.booking.Booking;
 import com.space.backend.domain.booking.BookingRepository;
 import com.space.backend.domain.booking.BookingStatus;
-import com.space.backend.domain.payment.*;
-import com.space.backend.domain.user.User;
+import com.space.backend.domain.payment.Payment;
+import com.space.backend.domain.payment.PaymentProvider;
+import com.space.backend.domain.payment.PaymentRepository;
+import com.space.backend.domain.payment.PaymentStatus;
 import com.space.backend.domain.user.UserRepository;
-import com.space.backend.infrastructure.external.kakao.KakaoPayApproveResponse;
-import com.space.backend.infrastructure.external.kakao.KakaoPayClient;
-import com.space.backend.infrastructure.external.kakao.KakaoPayReadyResponse;
-import com.space.backend.infrastructure.external.naver.NaverPayApproveResponse;
-import com.space.backend.infrastructure.external.naver.NaverPayClient;
-import com.space.backend.infrastructure.external.naver.NaverPayReadyResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,10 +25,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
-    private final NaverPayClient naverPayClient;
-    private final KakaoPayClient kakaoPayClient;
-
-    // ── 네이버페이 ──────────────────────────────────────────────
+    @Qualifier("naverPayGateway") private final PaymentGateway naverPayGateway;
+    @Qualifier("kakaoPayGateway") private final PaymentGateway kakaoPayGateway;
 
     @Override
     @Transactional
@@ -48,35 +44,30 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
         paymentRepository.save(payment);
 
-        NaverPayReadyResponse resp = naverPayClient.ready(
-                pgOrderId,
-                booking.getTotalPrice(),
-                booking.getSpace().getName(),
-                "/api/payments/naver/approve?pgOrderId=" + pgOrderId,
-                userId.toString()
-        );
+        PaymentGatewayReadyResult result = naverPayGateway.ready(new PaymentGatewayReadyCommand(
+                pgOrderId, userId.toString(), booking.getSpace().getName(), booking.getTotalPrice()
+        ));
 
-        String redirectUrl = resp.getBody() != null ? resp.getBody().getCheckoutPage() : "";
-        return new PaymentReadyResponse(pgOrderId, redirectUrl, "NAVER_PAY");
+        return new PaymentReadyResponse(pgOrderId, result.redirectUrl(), "NAVER_PAY");
     }
 
     @Override
     @Transactional
     public void approveNaverPay(String pgOrderId, String paymentId) {
         Payment payment = getPaymentByOrderId(pgOrderId);
-        NaverPayApproveResponse resp = naverPayClient.approve(pgOrderId, paymentId);
-
-        if (!"Success".equals(resp.getCode())) {
+        try {
+            PaymentGatewayApproveResult result = naverPayGateway.approve(new PaymentGatewayApproveCommand(
+                    pgOrderId, null, payment.getUser().getId().toString(), paymentId
+            ));
+            payment.approve(result.transactionId());
+            paymentRepository.save(payment);
+            confirmBooking(payment);
+        } catch (RuntimeException e) {
             payment.fail();
             paymentRepository.save(payment);
             handleBookingFailure(payment);
-            throw new RuntimeException("네이버페이 승인 실패: " + resp.getMessage());
+            throw e;
         }
-
-        String txId = resp.getBody() != null ? resp.getBody().getPaymentId() : paymentId;
-        payment.approve(txId);
-        paymentRepository.save(payment);
-        confirmBooking(payment);
     }
 
     @Override
@@ -87,8 +78,6 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
         handleBookingFailure(payment);
     }
-
-    // ── 카카오페이 ──────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -106,34 +95,26 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
         paymentRepository.save(payment);
 
-        KakaoPayReadyResponse resp = kakaoPayClient.ready(
-                pgOrderId,
-                userId.toString(),
-                booking.getSpace().getName(),
-                booking.getTotalPrice()
-        );
+        PaymentGatewayReadyResult result = kakaoPayGateway.ready(new PaymentGatewayReadyCommand(
+                pgOrderId, userId.toString(), booking.getSpace().getName(), booking.getTotalPrice()
+        ));
 
-        // tid 를 pgTransactionId 임시 저장 (approve 시 필요)
-        saveTid(payment, resp.getTid());
+        if (result.tid() != null) {
+            payment.saveTid(result.tid());
+            paymentRepository.save(payment);
+        }
 
-        String redirectUrl = resp.getNextRedirectMobileUrl() != null
-                ? resp.getNextRedirectMobileUrl() : resp.getNextRedirectPcUrl();
-        return new PaymentReadyResponse(pgOrderId, redirectUrl, "KAKAO_PAY");
+        return new PaymentReadyResponse(pgOrderId, result.redirectUrl(), "KAKAO_PAY");
     }
 
     @Override
     @Transactional
     public void approveKakaoPay(String pgOrderId, String pgToken) {
         Payment payment = getPaymentByOrderId(pgOrderId);
-        String tid = payment.getPgTransactionId(); // ready 단계에서 저장한 tid
-
-        KakaoPayApproveResponse resp = kakaoPayClient.approve(
-                tid, pgOrderId,
-                payment.getUser().getId().toString(),
-                pgToken
-        );
-
-        payment.approve(resp.getTid());
+        PaymentGatewayApproveResult result = kakaoPayGateway.approve(new PaymentGatewayApproveCommand(
+                pgOrderId, payment.getPgTransactionId(), payment.getUser().getId().toString(), pgToken
+        ));
+        payment.approve(result.transactionId());
         paymentRepository.save(payment);
         confirmBooking(payment);
     }
@@ -146,8 +127,6 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
         handleBookingFailure(payment);
     }
-
-    // ── private helpers ──────────────────────────────────────────
 
     private Booking getBookingForPayment(UUID bookingId, UUID userId) {
         Booking booking = bookingRepository.findById(bookingId)
@@ -176,12 +155,5 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = payment.getBooking();
         booking.cancelByAdmin("[SYSTEM] 결제 실패 자동 취소");
         bookingRepository.save(booking);
-    }
-
-    private void saveTid(Payment payment, String tid) {
-        // tid를 pgTransactionId 필드에 임시 저장하기 위한 별도 메서드
-        // Payment 엔티티에 updateTid 추가
-        payment.saveTid(tid);
-        paymentRepository.save(payment);
     }
 }
