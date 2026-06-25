@@ -10,6 +10,6 @@ public interface BookingRepository {
     Optional<Booking> findById(UUID id);
     List<Booking> findByUserId(UUID userId);
     List<Booking> findBySpaceAndDateRange(UUID spaceId, Instant from, Instant to);
-    List<Booking> findBySpaceAndMonth(UUID spaceId, int year, int month);
+    List<Booking> findBySpaceAndMonth(UUID spaceId, Instant monthStart, Instant monthEnd);
     List<Booking> findExpiredPending(Instant now);
 }

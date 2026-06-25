@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +18,8 @@ import java.util.UUID;
 public class BookingRepositoryImpl implements BookingRepository {
 
     private final BookingJpaRepository jpa;
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     private static final List<BookingStatus> ACTIVE_STATUSES =
             List.of(BookingStatus.PENDING, BookingStatus.CONFIRMED);
@@ -41,9 +45,8 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public List<Booking> findBySpaceAndMonth(UUID spaceId, int year, int month) {
-        Instant refDate = Instant.parse(String.format("%04d-%02d-01T00:00:00Z", year, month));
-        return jpa.findBySpaceAndMonth(spaceId, refDate, ACTIVE_STATUSES);
+    public List<Booking> findBySpaceAndMonth(UUID spaceId, Instant monthStart, Instant monthEnd) {
+        return jpa.findBySpaceAndMonth(spaceId, monthStart, monthEnd, ACTIVE_STATUSES);
     }
 
     @Override

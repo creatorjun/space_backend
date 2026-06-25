@@ -32,11 +32,13 @@ public interface BookingJpaRepository extends JpaRepository<Booking, UUID> {
             SELECT b FROM Booking b
             WHERE b.space.id = :spaceId
               AND b.status IN :statuses
-              AND FUNCTION('date_trunc', 'month', b.startAt) = FUNCTION('date_trunc', 'month', CAST(:refDate AS timestamp))
+              AND b.startAt >= :monthStart
+              AND b.startAt < :monthEnd
             """)
     List<Booking> findBySpaceAndMonth(
             @Param("spaceId") UUID spaceId,
-            @Param("refDate") Instant refDate,
+            @Param("monthStart") Instant monthStart,
+            @Param("monthEnd") Instant monthEnd,
             @Param("statuses") List<BookingStatus> statuses
     );
 

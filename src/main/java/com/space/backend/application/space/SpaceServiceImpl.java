@@ -10,7 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SpaceServiceImpl implements SpaceService {
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     private final SpaceCategoryRepository categoryRepository;
     private final SpaceRepository spaceRepository;
@@ -55,7 +59,10 @@ public class SpaceServiceImpl implements SpaceService {
     public AvailableDatesResponse getAvailableDates(UUID spaceId, int year, int month) {
         Space space = spaceRepository.findById(spaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Space not found: " + spaceId));
-        List<Booking> bookings = bookingRepository.findBySpaceAndMonth(spaceId, year, month);
+        YearMonth ym = YearMonth.of(year, month);
+        Instant monthStart = ym.atDay(1).atStartOfDay(SEOUL).toInstant();
+        Instant monthEnd = ym.plusMonths(1).atDay(1).atStartOfDay(SEOUL).toInstant();
+        List<Booking> bookings = bookingRepository.findBySpaceAndMonth(spaceId, monthStart, monthEnd);
         Map<LocalDate, Boolean> dates = bookingDomainService.calculateAvailableDates(space, year, month, bookings);
         return new AvailableDatesResponse(year, month, dates);
     }
@@ -65,9 +72,8 @@ public class SpaceServiceImpl implements SpaceService {
     public AvailableSlotsResponse getAvailableSlots(UUID spaceId, LocalDate date) {
         Space space = spaceRepository.findById(spaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Space not found: " + spaceId));
-        ZoneId zone = ZoneId.of("Asia/Seoul");
-        var from = date.atStartOfDay(zone).toInstant();
-        var to = date.plusDays(1).atStartOfDay(zone).toInstant();
+        Instant from = date.atStartOfDay(SEOUL).toInstant();
+        Instant to = date.plusDays(1).atStartOfDay(SEOUL).toInstant();
         List<Booking> bookings = bookingRepository.findBySpaceAndDateRange(spaceId, from, to);
         return new AvailableSlotsResponse(date,
                 bookingDomainService.calculateAvailableSlots(space, date, bookings));
