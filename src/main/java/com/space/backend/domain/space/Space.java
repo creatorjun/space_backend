@@ -82,4 +82,20 @@ public class Space {
     private void preUpdate() {
         updatedAt = Instant.now();
     }
+
+    public void update(SpaceCategory category, String name, String description, String address,
+                       int capacity, int minHours, int maxHours, int pricePerHour,
+                       String thumbnailUrl, int displayOrder, boolean isActive) {
+        this.category = category;
+        this.name = name;
+        this.description = description;
+        this.address = address;
+        this.capacity = capacity;
+        this.minHours = minHours;
+        this.maxHours = maxHours;
+        this.pricePerHour = pricePerHour;
+        this.thumbnailUrl = thumbnailUrl;
+        this.displayOrder = displayOrder;
+        this.isActive = isActive;
+    }
 }

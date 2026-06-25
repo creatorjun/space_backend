@@ -1,0 +1,151 @@
+package com.space.backend.application.admin;
+
+import com.space.backend.application.space.CategoryDto;
+import com.space.backend.application.space.SpaceDetailResponse;
+import com.space.backend.domain.space.*;
+import com.space.backend.infrastructure.persistence.space.SpaceClosedDayJpaRepository;
+import com.space.backend.infrastructure.persistence.space.SpaceOperatingHoursJpaRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class AdminSpaceServiceImpl implements AdminSpaceService {
+
+    private final SpaceCategoryRepository categoryRepository;
+    private final SpaceRepository spaceRepository;
+    private final SpaceOperatingHoursJpaRepository hoursRepository;
+    private final SpaceClosedDayJpaRepository closedDayRepository;
+
+    // ── 카테고리 ────────────────────────────────────
+    @Override
+    @Transactional
+    public CategoryDto createCategory(CreateCategoryCommand cmd) {
+        SpaceCategory cat = SpaceCategory.builder()
+                .name(cmd.name())
+                .displayOrder(cmd.displayOrder())
+                .build();
+        return CategoryDto.from(categoryRepository.save(cat));
+    }
+
+    @Override
+    @Transactional
+    public CategoryDto updateCategory(UUID categoryId, CreateCategoryCommand cmd) {
+        SpaceCategory cat = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        cat.update(cmd.name(), cmd.displayOrder());
+        return CategoryDto.from(categoryRepository.save(cat));
+    }
+
+    @Override
+    @Transactional
+    public void deleteCategory(UUID categoryId) {
+        categoryRepository.deleteById(categoryId);
+    }
+
+    // ── 공간 ─────────────────────────────────────
+    @Override
+    @Transactional
+    public SpaceDetailResponse createSpace(CreateSpaceCommand cmd) {
+        SpaceCategory category = categoryRepository.findById(cmd.categoryId())
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+
+        Space space = Space.builder()
+                .category(category)
+                .name(cmd.name())
+                .description(cmd.description())
+                .address(cmd.address())
+                .capacity(cmd.capacity())
+                .minHours(cmd.minHours())
+                .maxHours(cmd.maxHours())
+                .pricePerHour(cmd.pricePerHour())
+                .thumbnailUrl(cmd.thumbnailUrl())
+                .displayOrder(cmd.displayOrder())
+                .build();
+
+        if (cmd.imageUrls() != null) {
+            for (int i = 0; i < cmd.imageUrls().size(); i++) {
+                space.getImages().add(SpaceImage.builder()
+                        .space(space)
+                        .imageUrl(cmd.imageUrls().get(i))
+                        .displayOrder(i)
+                        .build());
+            }
+        }
+        return SpaceDetailResponse.from(spaceRepository.save(space));
+    }
+
+    @Override
+    @Transactional
+    public SpaceDetailResponse updateSpace(UUID spaceId, UpdateSpaceCommand cmd) {
+        Space space = spaceRepository.findById(spaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+        SpaceCategory category = categoryRepository.findById(cmd.categoryId())
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+
+        space.update(
+                category, cmd.name(), cmd.description(), cmd.address(),
+                cmd.capacity(), cmd.minHours(), cmd.maxHours(),
+                cmd.pricePerHour(), cmd.thumbnailUrl(), cmd.displayOrder(), cmd.isActive()
+        );
+
+        space.getImages().clear();
+        if (cmd.imageUrls() != null) {
+            for (int i = 0; i < cmd.imageUrls().size(); i++) {
+                space.getImages().add(SpaceImage.builder()
+                        .space(space)
+                        .imageUrl(cmd.imageUrls().get(i))
+                        .displayOrder(i)
+                        .build());
+            }
+        }
+        return SpaceDetailResponse.from(spaceRepository.save(space));
+    }
+
+    @Override
+    @Transactional
+    public void deleteSpace(UUID spaceId) {
+        spaceRepository.deleteById(spaceId);
+    }
+
+    // ── 운영시간 / 휴무일 ─────────────────────────
+    @Override
+    @Transactional
+    public void updateOperatingHours(UUID spaceId, List<OperatingHoursCommand> commands) {
+        Space space = spaceRepository.findById(spaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+        hoursRepository.deleteBySpaceId(spaceId);
+        for (OperatingHoursCommand cmd : commands) {
+            hoursRepository.save(SpaceOperatingHours.builder()
+                    .space(space)
+                    .dayOfWeek(cmd.dayOfWeek())
+                    .openTime(cmd.openTime())
+                    .closeTime(cmd.closeTime())
+                    .isClosed(cmd.isClosed())
+                    .build());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void addClosedDay(UUID spaceId, AddClosedDayCommand cmd) {
+        Space space = spaceRepository.findById(spaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+        closedDayRepository.save(SpaceClosedDay.builder()
+                .space(space)
+                .closedDate(cmd.closedDate())
+                .reason(cmd.reason())
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public void removeClosedDay(UUID spaceId, LocalDate date) {
+        closedDayRepository.deleteBySpaceIdAndClosedDate(spaceId, date);
+    }
+}

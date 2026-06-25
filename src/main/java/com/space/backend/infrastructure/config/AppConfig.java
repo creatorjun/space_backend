@@ -6,7 +6,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, OAuthProperties.class, EncryptionProperties.class})
+@EnableConfigurationProperties({
+        JwtProperties.class,
+        OAuthProperties.class,
+        EncryptionProperties.class,
+        PaymentProperties.class
+})
 public class AppConfig {
 
     @Bean
