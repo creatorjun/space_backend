@@ -1,19 +1,15 @@
+// src/main/java/com/space/backend/domain/booking/BookingDomainService.java
 package com.space.backend.domain.booking;
 
 import com.space.backend.domain.space.Space;
 import com.space.backend.domain.space.SpaceClosedDay;
 import com.space.backend.domain.space.SpaceOperatingHours;
-import org.springframework.stereotype.Service;
 
 import java.time.*;
 import java.util.*;
 
-@Service
 public class BookingDomainService {
 
-    /**
-     * 월 단위로 예약 가능 날짜 맵 반환 (key: LocalDate, value: true=가능)
-     */
     public Map<LocalDate, Boolean> calculateAvailableDates(
             Space space, int year, int month, List<Booking> existingBookings) {
 
@@ -32,9 +28,6 @@ public class BookingDomainService {
         return result;
     }
 
-    /**
-     * 일 단위로 가능한 시간 슬롯 리스트 반환
-     */
     public List<TimeSlot> calculateAvailableSlots(
             Space space, LocalDate date, List<Booking> existingBookings) {
 
@@ -89,8 +82,6 @@ public class BookingDomainService {
         return pricePerHour * hours;
     }
 
-    // --- private helpers ---
-
     private boolean isDayAvailable(Space space, LocalDate date, List<Booking> bookings) {
         boolean isClosedDay = space.getClosedDays().stream()
                 .map(SpaceClosedDay::getClosedDate)
@@ -118,7 +109,7 @@ public class BookingDomainService {
     }
 
     private SpaceOperatingHours getOperatingHours(Space space, LocalDate date) {
-        int dow = date.getDayOfWeek().getValue() % 7; // 0=일, 1=월 ... 6=토
+        int dow = date.getDayOfWeek().getValue() % 7;
         return space.getOperatingHours().stream()
                 .filter(h -> h.getDayOfWeek() == dow)
                 .findFirst()
