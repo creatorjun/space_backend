@@ -50,7 +50,6 @@ public class Payment {
     private String refundReason;
 
     private Instant paidAt;
-
     private Instant refundedAt;
 
     @Column(nullable = false, updatable = false)
@@ -68,6 +67,10 @@ public class Payment {
     @PreUpdate
     private void preUpdate() {
         updatedAt = Instant.now();
+    }
+
+    public void saveTid(String tid) {
+        this.pgTransactionId = tid;
     }
 
     public void approve(String pgTransactionId) {
