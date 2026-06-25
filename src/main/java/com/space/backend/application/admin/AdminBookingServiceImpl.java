@@ -7,6 +7,8 @@ import com.space.backend.domain.booking.AdminBookingQueryPort;
 import com.space.backend.domain.booking.Booking;
 import com.space.backend.domain.booking.BookingRepository;
 import com.space.backend.domain.booking.BookingStatus;
+import com.space.backend.domain.exception.EntityNotFoundException;
+import com.space.backend.domain.exception.InvalidStatusException;
 import com.space.backend.domain.payment.Payment;
 import com.space.backend.domain.payment.PaymentProvider;
 import com.space.backend.domain.payment.PaymentRepository;
@@ -41,7 +43,7 @@ public class AdminBookingServiceImpl implements AdminBookingService {
     @Transactional(readOnly = true)
     public AdminBookingResult getBookingById(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> EntityNotFoundException.booking(bookingId));
         return AdminBookingResult.from(booking);
     }
 
@@ -49,11 +51,11 @@ public class AdminBookingServiceImpl implements AdminBookingService {
     @Transactional
     public void updateBookingStatus(UUID bookingId, UpdateBookingStatusCommand cmd) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> EntityNotFoundException.booking(bookingId));
         switch (cmd.status()) {
             case CONFIRMED -> booking.confirm();
             case CANCELLED_BY_ADMIN -> booking.cancelByAdmin(cmd.adminMemo());
-            default -> throw new IllegalArgumentException("관리자가 설정할 수 없는 상태: " + cmd.status());
+            default -> throw new InvalidStatusException("관리자가 설정할 수 없는 상태: " + cmd.status());
         }
         bookingRepository.save(booking);
     }
@@ -62,12 +64,12 @@ public class AdminBookingServiceImpl implements AdminBookingService {
     @Transactional
     public void approveRefund(UUID bookingId, ApproveRefundCommand cmd) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> EntityNotFoundException.booking(bookingId));
         if (booking.getStatus() != BookingStatus.CANCEL_REQUESTED) {
-            throw new IllegalArgumentException("취소 신청 상태가 아닙니다");
+            throw new InvalidStatusException("취소 신청 상태가 아닙니다");
         }
         Payment payment = paymentRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
+                .orElseThrow(() -> EntityNotFoundException.payment(bookingId));
 
         PaymentGateway gateway = payment.getProvider() == PaymentProvider.NAVER_PAY
                 ? naverPayGateway : kakaoPayGateway;

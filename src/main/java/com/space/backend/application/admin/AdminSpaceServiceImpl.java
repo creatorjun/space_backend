@@ -3,6 +3,7 @@ package com.space.backend.application.admin;
 
 import com.space.backend.application.space.CategoryDto;
 import com.space.backend.application.space.SpaceDetailResponse;
+import com.space.backend.domain.exception.EntityNotFoundException;
 import com.space.backend.domain.space.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,7 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
     @Transactional
     public CategoryDto updateCategory(UUID categoryId, CreateCategoryCommand cmd) {
         SpaceCategory cat = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> EntityNotFoundException.category(categoryId));
         cat.update(cmd.name(), cmd.displayOrder());
         return CategoryDto.from(categoryRepository.save(cat));
     }
@@ -50,7 +51,7 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
     @Transactional
     public SpaceDetailResponse createSpace(CreateSpaceCommand cmd) {
         SpaceCategory category = categoryRepository.findById(cmd.categoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> EntityNotFoundException.category(cmd.categoryId()));
 
         Space space = Space.builder()
                 .category(category)
@@ -81,9 +82,9 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
     @Transactional
     public SpaceDetailResponse updateSpace(UUID spaceId, UpdateSpaceCommand cmd) {
         Space space = spaceRepository.findById(spaceId)
-                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+                .orElseThrow(() -> EntityNotFoundException.space(spaceId));
         SpaceCategory category = categoryRepository.findById(cmd.categoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> EntityNotFoundException.category(cmd.categoryId()));
 
         space.update(
                 category, cmd.name(), cmd.description(), cmd.address(),
@@ -114,7 +115,7 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
     @Transactional
     public void updateOperatingHours(UUID spaceId, List<OperatingHoursCommand> commands) {
         Space space = spaceRepository.findById(spaceId)
-                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+                .orElseThrow(() -> EntityNotFoundException.space(spaceId));
         hoursRepository.deleteBySpaceId(spaceId);
         for (OperatingHoursCommand cmd : commands) {
             hoursRepository.save(SpaceOperatingHours.builder()
@@ -131,7 +132,7 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
     @Transactional
     public void addClosedDay(UUID spaceId, AddClosedDayCommand cmd) {
         Space space = spaceRepository.findById(spaceId)
-                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+                .orElseThrow(() -> EntityNotFoundException.space(spaceId));
         closedDayRepository.save(SpaceClosedDay.builder()
                 .space(space)
                 .closedDate(cmd.closedDate())

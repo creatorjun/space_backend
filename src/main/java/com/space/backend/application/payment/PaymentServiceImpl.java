@@ -4,6 +4,10 @@ package com.space.backend.application.payment;
 import com.space.backend.domain.booking.Booking;
 import com.space.backend.domain.booking.BookingRepository;
 import com.space.backend.domain.booking.BookingStatus;
+import com.space.backend.domain.exception.EntityNotFoundException;
+import com.space.backend.domain.exception.InvalidStatusException;
+import com.space.backend.domain.exception.PaymentException;
+import com.space.backend.domain.exception.UnauthorizedAccessException;
 import com.space.backend.domain.payment.Payment;
 import com.space.backend.domain.payment.PaymentProvider;
 import com.space.backend.domain.payment.PaymentRepository;
@@ -130,19 +134,19 @@ public class PaymentServiceImpl implements PaymentService {
 
     private Booking getBookingForPayment(UUID bookingId, UUID userId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> EntityNotFoundException.booking(bookingId));
         if (!booking.getUser().getId().equals(userId)) {
-            throw new SecurityException("접근 권한이 없습니다");
+            throw UnauthorizedAccessException.noPermission();
         }
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new IllegalStateException("결제 가능한 상태가 아닙니다");
+            throw PaymentException.notPayable();
         }
         return booking;
     }
 
     private Payment getPaymentByOrderId(String pgOrderId) {
         return paymentRepository.findByPgOrderId(pgOrderId)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + pgOrderId));
+                .orElseThrow(() -> PaymentException.notFound(pgOrderId));
     }
 
     private void confirmBooking(Payment payment) {
