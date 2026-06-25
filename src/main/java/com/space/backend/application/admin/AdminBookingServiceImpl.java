@@ -1,15 +1,17 @@
+// src/main/java/com/space/backend/application/admin/AdminBookingServiceImpl.java
 package com.space.backend.application.admin;
 
+import com.space.backend.application.payment.PaymentGateway;
+import com.space.backend.application.payment.PaymentGatewayRefundCommand;
+import com.space.backend.domain.booking.AdminBookingQueryPort;
 import com.space.backend.domain.booking.Booking;
 import com.space.backend.domain.booking.BookingRepository;
 import com.space.backend.domain.booking.BookingStatus;
 import com.space.backend.domain.payment.Payment;
 import com.space.backend.domain.payment.PaymentProvider;
 import com.space.backend.domain.payment.PaymentRepository;
-import com.space.backend.infrastructure.external.kakao.KakaoPayClient;
-import com.space.backend.infrastructure.external.naver.NaverPayClient;
-import com.space.backend.infrastructure.persistence.booking.AdminBookingQueryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,15 +24,15 @@ public class AdminBookingServiceImpl implements AdminBookingService {
 
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
-    private final AdminBookingQueryRepository queryRepository;
-    private final NaverPayClient naverPayClient;
-    private final KakaoPayClient kakaoPayClient;
+    private final AdminBookingQueryPort adminBookingQueryPort;
+    @Qualifier("naverPayGateway") private final PaymentGateway naverPayGateway;
+    @Qualifier("kakaoPayGateway") private final PaymentGateway kakaoPayGateway;
 
     @Override
     @Transactional(readOnly = true)
     public AdminBookingListResponse getBookings(BookingSearchCondition condition) {
-        List<Booking> bookings = queryRepository.findByCondition(condition);
-        long total = queryRepository.countByCondition(condition);
+        List<Booking> bookings = adminBookingQueryPort.findByCondition(condition);
+        long total = adminBookingQueryPort.countByCondition(condition);
         List<AdminBookingDto> dtos = bookings.stream().map(AdminBookingDto::from).toList();
         return new AdminBookingListResponse(dtos, (int) total, condition.page(), condition.size());
     }
@@ -67,20 +69,14 @@ public class AdminBookingServiceImpl implements AdminBookingService {
         Payment payment = paymentRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
 
-        // PG API 실제 환불 호출
-        if (payment.getProvider() == PaymentProvider.NAVER_PAY) {
-            naverPayClient.refund(
-                    payment.getPgTransactionId(),
-                    cmd.refundAmountKrw(),
-                    cmd.reason()
-            );
-        } else {
-            kakaoPayClient.cancel(
-                    payment.getPgTransactionId(),
-                    cmd.refundAmountKrw(),
-                    cmd.reason()
-            );
-        }
+        PaymentGateway gateway = payment.getProvider() == PaymentProvider.NAVER_PAY
+                ? naverPayGateway : kakaoPayGateway;
+
+        gateway.refund(new PaymentGatewayRefundCommand(
+                payment.getPgTransactionId(),
+                cmd.refundAmountKrw(),
+                cmd.reason()
+        ));
 
         payment.refund(cmd.refundAmountKrw(), cmd.reason());
         paymentRepository.save(payment);

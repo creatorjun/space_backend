@@ -1,10 +1,9 @@
+// src/main/java/com/space/backend/application/admin/AdminSpaceServiceImpl.java
 package com.space.backend.application.admin;
 
 import com.space.backend.application.space.CategoryDto;
 import com.space.backend.application.space.SpaceDetailResponse;
 import com.space.backend.domain.space.*;
-import com.space.backend.infrastructure.persistence.space.SpaceClosedDayJpaRepository;
-import com.space.backend.infrastructure.persistence.space.SpaceOperatingHoursJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +18,9 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
 
     private final SpaceCategoryRepository categoryRepository;
     private final SpaceRepository spaceRepository;
-    private final SpaceOperatingHoursJpaRepository hoursRepository;
-    private final SpaceClosedDayJpaRepository closedDayRepository;
+    private final SpaceOperatingHoursRepository hoursRepository;
+    private final SpaceClosedDayRepository closedDayRepository;
 
-    // ── 카테고리 ────────────────────────────────────
     @Override
     @Transactional
     public CategoryDto createCategory(CreateCategoryCommand cmd) {
@@ -48,7 +46,6 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
         categoryRepository.deleteById(categoryId);
     }
 
-    // ── 공간 ─────────────────────────────────────
     @Override
     @Transactional
     public SpaceDetailResponse createSpace(CreateSpaceCommand cmd) {
@@ -113,7 +110,6 @@ public class AdminSpaceServiceImpl implements AdminSpaceService {
         spaceRepository.deleteById(spaceId);
     }
 
-    // ── 운영시간 / 휴무일 ─────────────────────────
     @Override
     @Transactional
     public void updateOperatingHours(UUID spaceId, List<OperatingHoursCommand> commands) {
