@@ -1,0 +1,60 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/space_backend}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiry-seconds: ${JWT_ACCESS_EXPIRY_SECONDS:900}
+  refresh-expiry-days: ${JWT_REFRESH_EXPIRY_DAYS:30}
+
+encryption:
+  social-id-key: ${SOCIAL_ID_ENCRYPTION_KEY_BASE64}
+
+oauth:
+  naver:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+    redirect-uri: ${NAVER_REDIRECT_URI}
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID}
+    client-secret: ${KAKAO_CLIENT_SECRET}
+    redirect-uri: ${KAKAO_REDIRECT_URI}
+
+payment:
+  naver:
+    client-id: ${NAVER_PAY_CLIENT_ID}
+    client-secret: ${NAVER_PAY_CLIENT_SECRET}
+    chain-id: ${NAVER_PAY_CHAIN_ID}
+    env: ${NAVER_PAY_ENV:sandbox}
+  kakao:
+    secret-key: ${KAKAO_PAY_SECRET_KEY}
+    cid: ${KAKAO_PAY_CID:TC0ONETIME}
+    approval-url: ${KAKAO_PAY_APPROVAL_URL}
+    cancel-url: ${KAKAO_PAY_CANCEL_URL}
+    fail-url: ${KAKAO_PAY_FAIL_URL}
+
+booking:
+  pending-expiry-minutes: ${BOOKING_PENDING_EXPIRY_MINUTES:15}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

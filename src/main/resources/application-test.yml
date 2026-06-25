@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:15:///space_backend_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LWZvci11bml0LXRlc3Rpbmctb25seQ==
+  access-expiry-seconds: 900
+  refresh-expiry-days: 30
+
+encryption:
+  social-id-key: dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcy1sb25n
